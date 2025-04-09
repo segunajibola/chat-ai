@@ -100,6 +100,12 @@ app.post("/chat", async (req: Request, res: Response): Promise<any> => {
     return res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
+// git commit --date="2025-04-09T12:00:00" -m "Your commit message here"
+n;
+npm i - D drizzle-kit;
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
+
+// neon to use postgress db
+// drizzle is an orm to interact with db, typescrit base. neon db serverless adapter, => npm i drizzle-orm @neondatabase/serverless
+// drizzle kit is a cli and we can run migration there => npm i -D drizzle-kit
