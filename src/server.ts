@@ -2,7 +2,7 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { StreamChat } from "stream-chat";
-i;
+import OpenAI from "openai";
 
 dotenv.config();
 
@@ -17,6 +17,7 @@ const chatClient = StreamChat.getInstance(
   process.env.STREAM_API_KEY!,
   process.env.STREAM_API_SECRET!
 );
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 //registeruser with stream chat
 app.post(
@@ -50,6 +51,33 @@ app.post(
     }
   }
 );
+app.post("/chat", async (req: Request, res: Response): Promise<any> => {
+  if (!req.body) {
+    return res.status(400).json({ error: "Missing request body" });
+  }
+  const { message, userId, email } = req.body;
 
+  if (!message || !userId) {
+    res.status(400).json({ userId, error: "Message and user required" });
+  }
+  try {
+    // verify user exists
+    const userResponse = await chatClient.queryUsers({ id: userId });
+    if (!userResponse.users.length) {
+      return res
+        .status(404)
+        .json({ error: "user not found, please register first" });
+    }
+    // return res.status(200).json({ message, userId, email, success: "success" });
+    // Send message to OpenAI GPT-4
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [{ role: "user", content: message }],
+    });
+    console.log(response);
+  } catch (error) {
+    return res.status(500).json({ error: "Intesrnal Server Error" });
+  }
+});
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
