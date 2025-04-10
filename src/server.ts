@@ -96,7 +96,7 @@ app.post("/chat", async (req: Request, res: Response): Promise<any> => {
     // const reply = response.choices[0]?.message?.content || "No response";
     // return res.status(200).json({ reply });
   } catch (error) {
-    console.error("Chat errobr:", error);
+    console.log("Error generating AI response", error);
     return res.status(500).json({ error: "Internal Server Error" });
   }
 });
