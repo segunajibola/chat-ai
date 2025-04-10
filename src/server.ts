@@ -58,7 +58,7 @@ app.post("/chat", async (req: Request, res: Response): Promise<any> => {
   const { message, userId, email } = req.body;
 
   if (!message || !userId) {
-    res.status(400).json({ userId, error: "Message and user required" });
+    return res.status(400).json({ userId, error: "Message and user required" });
   }
   try {
     // verify user exists
@@ -71,13 +71,35 @@ app.post("/chat", async (req: Request, res: Response): Promise<any> => {
     // return res.status(200).json({ message, userId, email, success: "success" });
     // Send message to OpenAI GPT-4
     const response = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-3.5-turbo",
       messages: [{ role: "user", content: message }],
     });
-    console.log(response);
+
+    const aiMessage: string =
+      response.choices[0].message?.content ?? "No response from AI";
+
+    //Create or get channel
+    const channel = chatClient.channel("messaging", `chat-${userId}`, {
+      name: "AI Chat",
+      created_by_id: "ai_bot",
+    });
+    await channel.create();
+    await channel.sendMessage({ text: aiMessage, user_id: "ai_bot" });
+    console.log("response", response);
+    res.status(200).json({ reply: aiMessage });
+
+    // const models = await openai.models.list();
+    // console.log(
+    //   "models",
+    //   models.data.map((m) => console.log(m.id))
+    // );
+    // const reply = response.choices[0]?.message?.content || "No response";
+    // return res.status(200).json({ reply });
   } catch (error) {
-    return res.status(500).json({ error: "Intesrnal Server Error" });
+    console.error("Chat errobr:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 });
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
