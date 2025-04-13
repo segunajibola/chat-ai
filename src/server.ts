@@ -3,6 +3,10 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { StreamChat } from "stream-chat";
 import OpenAI from "openai";
+import { db } from "./config/database.js";
+import { chats, users } from "./db/schema.js";
+import { eq } from "drizzle-orm";
+import { ChatCompletionMessageParam } from "openai/resources";
 
 dotenv.config();
 
@@ -12,6 +16,7 @@ const app = express(); //initialise express app
 app.use(cors());
 app.use(express.json()); //when we send request, we want to be able to send req in the body
 app.use(express.urlencoded({ extended: false })); //to send formdata as request
+
 //Initialise streamchat
 const chatClient = StreamChat.getInstance(
   process.env.STREAM_API_KEY!,
@@ -19,7 +24,7 @@ const chatClient = StreamChat.getInstance(
 );
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-//registeruser with stream chat
+//register user with stream chat
 app.post(
   "/register-user",
   async (req: Request, res: Response): Promise<any> => {
@@ -45,6 +50,19 @@ app.post(
       if (!userResponse.users.length) {
         await chatClient.upsertUser({ id: userId, name, email, role: "user" });
       }
+      // Check for existing user in database
+      const existingUser = await db
+        .select()
+        .from(users)
+        .where(eq(users.userId, userId));
+
+      if (!existingUser.length) {
+        console.log(
+          `User ${userId} does not exist in the database. Adding them...`
+        );
+        await db.insert(users).values({ userId, name, email });
+      }
+
       return res.status(200).json({ message: "Success", userId, name, email });
     } catch (error) {
       res.status(500).json({ error: "Internal Server Error" });
@@ -61,7 +79,7 @@ app.post("/chat", async (req: Request, res: Response): Promise<any> => {
     return res.status(400).json({ userId, error: "Message and user required" });
   }
   try {
-    // verify user exists
+    // verify user exists.
     const userResponse = await chatClient.queryUsers({ id: userId });
     if (!userResponse.users.length) {
       return res
