@@ -79,7 +79,7 @@ app.post("/chat", async (req: Request, res: Response): Promise<any> => {
     return res.status(400).json({ userId, error: "Message and user required" });
   }
   try {
-    // verify user exists
+    // verify user exists.
     const userResponse = await chatClient.queryUsers({ id: userId });
     if (!userResponse.users.length) {
       return res
