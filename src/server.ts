@@ -8,6 +8,8 @@ import { chats, users } from "./db/schema.js";
 import { eq } from "drizzle-orm";
 import { ChatCompletionMessageParam } from "openai/resources";
 
+// import ts files with js extensions
+
 dotenv.config();
 
 const app = express(); //initialise express app
@@ -46,7 +48,7 @@ app.post(
       const userResponse = await chatClient.queryUsers({ id: { $eq: userId } });
       console.log(userResponse);
 
-      //if no user, create a new user
+      //if no user, create a new user in stream
       if (!userResponse.users.length) {
         await chatClient.upsertUser({ id: userId, name, email, role: "user" });
       }
@@ -96,6 +98,9 @@ app.post("/chat", async (req: Request, res: Response): Promise<any> => {
     const aiMessage: string =
       response.choices[0].message?.content ?? "No response from AI";
 
+    // Save chat to database
+    await db.insert(chats).values({ userId, message, reply: aiMessage });
+
     //Create or get channel
     const channel = chatClient.channel("messaging", `chat-${userId}`, {
       name: "AI Chat",
@@ -105,17 +110,29 @@ app.post("/chat", async (req: Request, res: Response): Promise<any> => {
     await channel.sendMessage({ text: aiMessage, user_id: "ai_bot" });
     console.log("response", response);
     res.status(200).json({ reply: aiMessage });
-
-    // const models = await openai.models.list();
-    // console.log(
-    //   "models",
-    //   models.data.map((m) => console.log(m.id))
-    // );
-    // const reply = response.choices[0]?.message?.content || "No response";
-    // return res.status(200).json({ reply });
   } catch (error) {
     console.log("Error generating AI response", error);
     return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Get chat history for a user.
+app.post("/get-messages", async (req: Request, res: Response): Promise<any> => {
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ error: "User ID is required" });
+  }
+  try {
+    const chatHistory = await db
+      .select()
+      .from(chats)
+      .where(eq(chats.userId, userId));
+
+    res.status(200).json({ messages: chatHistory });
+  } catch (error) {
+    console.log("Error fetching chat history", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
