@@ -136,7 +136,7 @@ app.post("/get-messages", async (req: Request, res: Response): Promise<any> => {
   }
 });
 
-const PORT = process.env.PORT || 5000;.
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
 
 // git add .; git commit --date="2025-04-18" -m "fix"; git push
